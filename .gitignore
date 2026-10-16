@@ -1,0 +1,11 @@
+# Swift 빌드 산출물
+.build/
+build/
+
+# Xcode/SwiftPM 개인 설정
+.swiftpm/
+*.xcuserstate
+xcuserdata/
+
+# macOS
+.DS_Store
