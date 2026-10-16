@@ -446,9 +446,20 @@ func capture(_ regions: [Region], tmpDir: URL) throws -> [Shot] {
     }
 }
 
-/// Adobe Acrobat 을 AppleScript 로 조작한다 (자동화 권한 필요)
+/// Adobe Acrobat / Acrobat Reader 를 AppleScript 로 조작한다 (자동화 권한 필요).
+/// 두 앱 모두 같은 명령(goto, goto next, page number, active doc)을 제공한다.
 enum Acrobat {
-    static let bundleID = "com.adobe.Acrobat.Pro"
+    /// 명령을 보낼 앱. 캡처 영역 아래의 뷰어로 정해진다 (use(_:))
+    static var bundleID = "com.adobe.Acrobat.Pro"
+
+    /// 뷰어가 Adobe 앱이면 그 앱을 대상으로 정한다
+    static func use(_ viewer: NSRunningApplication) throws {
+        guard let id = viewer.bundleIdentifier, id.hasPrefix("com.adobe.") else {
+            throw PageCapError("Acrobat 스크립트 방식은 Adobe Acrobat / Acrobat Reader 에서만 동작합니다. "
+                + "현재 뷰어: \(viewer.localizedName ?? "?"). 다른 넘기기 방식을 고르세요")
+        }
+        bundleID = id
+    }
 
     static func run(_ body: String) throws -> String {
         let p = Process()
@@ -463,7 +474,7 @@ enum Acrobat {
         guard p.terminationStatus == 0 else {
             let msg = String(data: err.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
             throw PageCapError("Acrobat 스크립트 실패: \(msg.trimmingCharacters(in: .whitespacesAndNewlines)). "
-                + "Acrobat 에 문서가 열려 있는지, 시스템 설정 → 개인정보 보호 및 보안 → 자동화에서 PageCap 의 Adobe Acrobat 항목이 켜져 있는지 확인하세요")
+                + "Acrobat 에 문서가 열려 있는지, 시스템 설정 → 개인정보 보호 및 보안 → 자동화에서 PageCap 의 Adobe 항목이 켜져 있는지 확인하세요")
         }
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -560,6 +571,7 @@ public func testPageTurn(regions: [Region], action: NextAction, completion: @esc
     }
     Thread.detachNewThread {
         let result = Result<Bool, Error> {
+            if action == .acrobat { try Acrobat.use(viewer) }
             try focusViewer(viewer, clickAt: first.center)
             let tmpDir = FileManager.default.temporaryDirectory.appendingPathComponent("pagecap-test-\(UUID().uuidString)")
             try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
@@ -631,6 +643,7 @@ public final class CaptureSession {
         emit(.status("대상 앱: \(viewer.localizedName ?? "?") — 다른 앱을 클릭하면 중단됩니다"))
         Thread.detachNewThread { [self] in
             do {
+                if config.next == .acrobat { try Acrobat.use(viewer) }
                 try focusViewer(viewer, clickAt: first.center)
                 emit(.status("\(viewer.localizedName ?? "뷰어") 포커스 확인 — 넘기기 시작: \(config.next.label)"))
                 try run(viewerPID: viewer.processIdentifier)

@@ -19,7 +19,9 @@ Cmd+Shift+5로 한 장씩 찍던 작업을 자동으로 처리합니다.
 
 - macOS 13 이상
 - Xcode 또는 Command Line Tools (`xcode-select --install`), Swift 5.9 이상
-- Acrobat 스크립트 방식을 쓰려면 **Adobe Acrobat Pro** (무료 Reader 불가)
+- Acrobat 스크립트 방식을 쓰려면 Adobe Acrobat 또는 Acrobat Reader
+  - 확인한 환경: Adobe Acrobat DC 26.002 앱을 **Adobe 로그인 없이** 사용 (번들 ID `com.adobe.Acrobat.Pro`)
+  - 별도 설치한 Acrobat Reader 앱도 같은 스크립트 명령을 제공하지만, 실제로 실행해 보지는 않았습니다
 
 ## 빌드
 
@@ -65,7 +67,7 @@ GUI는 `PageCap`에, CLI는 실행하는 터미널 앱에 권한을 줍니다.
 
 | 방식 | 설명 |
 |---|---|
-| **Acrobat 스크립트 (권장)** | AppleScript로 Acrobat에 쪽 번호를 지정해 이동합니다. 전체 쪽수를 알 수 있어 마지막 쪽에서 정확히 멈추고, 빈 쪽처럼 내용이 같아 보이는 쪽이 있어도 멈추지 않습니다. 영역이 2개면 2쪽씩 이동합니다 |
+| **Acrobat 스크립트 (권장)** | AppleScript로 영역 아래의 Adobe 앱(Acrobat 또는 Reader)에 쪽 번호를 지정해 이동합니다. 전체 쪽수를 알 수 있어 마지막 쪽에서 정확히 멈추고, 빈 쪽처럼 내용이 같아 보이는 쪽이 있어도 멈추지 않습니다. 영역이 2개면 2쪽씩 이동합니다 |
 | 마우스 앞으로·뒤로 버튼 | 마우스 사이드 버튼 신호를 보냅니다 |
 | →, ←, ↓, Page Down, 스페이스바 | 키 입력을 보냅니다 |
 | 직접 눌러서 등록 | 뷰어 위에서 평소 넘기는 버튼이나 키를 한 번 누르면, 실제로 들어온 신호를 원본 그대로 저장했다가 재생합니다 |
@@ -113,6 +115,7 @@ GUI는 `PageCap`에, CLI는 실행하는 터미널 앱에 권한을 줍니다.
   - 받아서 처음 열 때 막히면 우클릭 → **열기**를 누르거나 `xattr -dr com.apple.quarantine PageCap.app`을 실행합니다.
 - **소스로 빌드**: 저장소를 받아 `./scripts/build-app.sh`를 실행합니다.
 - 어느 방법이든 권한은 그 맥에서 다시 켜야 합니다.
+- Acrobat 스크립트 방식에는 Adobe Acrobat 또는 Acrobat Reader가 필요합니다. Adobe 로그인은 필요 없습니다.
 
 ## 문제 해결
 
