@@ -14,12 +14,16 @@ struct Options {
     var timeout = 6.0
     var overwrite = false
     var selectOnly = false
+    var pdf: URL?
+    var dpi = PDFQuality.high.dpi
 }
 
 let usage = """
 사용법:
   pagecap [옵션]            영역을 드래그로 지정한 뒤 자동 캡처 시작
   pagecap select [옵션]     영역만 지정하고 --region 인자를 출력
+  pagecap pdf FILE [옵션]   일반 PDF 의 각 쪽을 화면 캡처 없이 바로 PNG 로 저장
+                            (--out, --start, --overwrite, --dpi 만 사용. 권한 필요 없음)
 
 옵션:
   --out DIR           저장 폴더 (기본: 현재 폴더). 파일명은 001_capture.png 형식
@@ -31,6 +35,7 @@ let usage = """
   --max N             최대 페이지 넘김 횟수 (기본 2000)
   --timeout SEC       넘긴 뒤 화면이 이만큼 안 바뀌면 마지막 페이지로 보고 종료 (기본 6)
   --overwrite         같은 이름의 파일이 있으면 덮어쓰기
+  --dpi N             pdf 명령의 해상도 (기본 200. 100/150/200/300/600 권장)
 
 중단: 다른 앱을 클릭해 포커스를 옮기면 멈춥니다 (또는 터미널에서 Ctrl+C).
 권한: 터미널 앱에 '화면 기록'과 '손쉬운 사용' 권한이 필요합니다.
@@ -45,6 +50,12 @@ func parseOptions() -> Options {
     var o = Options()
     var args = Array(CommandLine.arguments.dropFirst())
     if args.first == "select" { o.selectOnly = true; args.removeFirst() }
+    if args.first == "pdf" {
+        args.removeFirst()
+        guard let path = args.first, !path.hasPrefix("-") else { fail("pdf 명령에 PDF 파일 경로가 필요합니다") }
+        o.pdf = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+        args.removeFirst()
+    }
     var i = 0
     func value() -> String {
         i += 1
@@ -68,6 +79,10 @@ func parseOptions() -> Options {
         case "--max": o.max = Int(value()) ?? 2000
         case "--timeout": o.timeout = Double(value()) ?? 6
         case "--overwrite": o.overwrite = true
+        case "--dpi":
+            let v = value()
+            guard let d = Double(v), (36...1200).contains(d) else { fail("--dpi 는 36~1200 사이 숫자여야 합니다") }
+            o.dpi = CGFloat(d)
         default: fail("알 수 없는 옵션: \(args[i])\n\n\(usage)")
         }
         i += 1
@@ -77,6 +92,27 @@ func parseOptions() -> Options {
 }
 
 let opts = parseOptions()
+
+if let pdf = opts.pdf {
+    if case .failure(let error) = PDFExport.checkSupport() { fail(error.localizedDescription) }
+    var config = PDFExportConfig(file: pdf, outDir: opts.outDir)
+    config.dpi = opts.dpi
+    config.start = opts.start
+    config.overwrite = opts.overwrite
+    let session = PDFExportSession(config: config) { event in
+        switch event {
+        case .status(let msg): print(msg)
+        case .saved(let url): print("저장: \(url.lastPathComponent)")
+        case .finished(let saved, let reason):
+            print(reason)
+            print("완료: \(saved)장 → \(opts.outDir.path)")
+            exit(0)
+        case .failed(let msg): fail(msg)
+        }
+    }
+    session.start()
+    dispatchMain()
+}
 
 if !opts.selectOnly {
     if !Permissions.screenRecording(prompt: true) {
